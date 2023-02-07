@@ -65,10 +65,13 @@ func HandlerConnectReq(c *gin.Context) {
 		}
 		switch msg.Type {
 		case TYPE_PING:
+			Logger.Debugf("Get a message: %s", message)
 			err := HandlePingMessage(mt, msg, conn)
 			if err != nil {
 				Logger.Error(err)
 			}
+		default:
+			Logger.Infof("Message is: %s", message)
 		}
 	}
 }
