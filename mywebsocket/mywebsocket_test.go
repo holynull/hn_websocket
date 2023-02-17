@@ -73,7 +73,7 @@ func tickWriter(ctx context.Context, connect *websocket.Conn) {
 			break
 		default:
 			pingMsg := BaseMessage{
-				Type:     TYPE_PING,
+				Type:     TypePing,
 				CreateAt: time.Now(),
 			}
 			b, err := json.Marshal(pingMsg)

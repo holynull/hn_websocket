@@ -1,22 +1,28 @@
 package mywebsocket
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/holynull/go-log"
+	"google.golang.org/protobuf/proto"
 )
 
 var Logger = log.Logger("mywebsocket")
 
 const (
-	TYPE_PING = "ping"
-	TYPE_PONG = "pong"
+	TypePing      = "ping"
+	TypePong      = "pong"
+	OpReqDKG      = "reqdkg"
+	OpStartDKG    = "start_dkg"
+	MpcDKGMessage = "mpc_dkg_message"
 )
 
 type BaseMessage struct {
@@ -41,45 +47,89 @@ var upGrader = &websocket.Upgrader{
 	},
 }
 
+var ConnMap sync.Map
+
+func lenSyncMap(m *sync.Map) int {
+	var i int
+	m.Range(func(k, v interface{}) bool {
+		i++
+		return true
+	})
+	return i
+}
+
 func HandlerConnectReq(c *gin.Context) {
-	// todo: 参数应该传递一个设备信息，并用用户的私钥签名
-	// 然后，验证用户签名，通过才能连接
+	userId, ok := c.GetQuery("userId")
+	if !ok {
+		c.JSON(http.StatusBadRequest, "userId required.")
+		return
+	}
+	dId, ok := c.GetQuery("dId")
+	if !ok {
+		c.JSON(http.StatusBadRequest, "dId required.")
+		return
+	}
+	key := fmt.Sprintf("%s_%s", userId, dId)
 	//升级get请求为webSocket协议
 	conn, err := upGrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		Logger.Error(err)
 		return
 	}
+	ConnMap.Store(key, conn)
 	defer conn.Close()
 	for {
 		//读取ws中的数据
 		mt, message, err := conn.ReadMessage()
 		if err != nil {
+			ConnMap.Delete(key)
 			break
 		}
-		var msg BaseMessage
-		err = json.Unmarshal(message, &msg)
-		if err != nil {
-			Logger.Error(err)
-			return
-		}
-		switch msg.Type {
-		case TYPE_PING:
-			Logger.Debugf("Get a message: %s", message)
-			err := HandlePingMessage(mt, msg, conn)
+		switch mt {
+		case websocket.TextMessage:
+			b, err := base64.StdEncoding.DecodeString(string(message))
 			if err != nil {
 				Logger.Error(err)
+				ConnMap.Delete(key)
+				return
 			}
+			var pMsg Operation
+			proto.Unmarshal(b, &pMsg)
+			switch pMsg.Op {
+			case TypePing:
+				Logger.Debugf("Get a message: %s", message)
+			// err := HandlePingMessage(mt, msg, conn)
+			// if err != nil {
+			// 	ConnMap.Delete(key)
+			// 	Logger.Error(err)
+			// }
+			case OpReqDKG:
+				Logger.Debug("Get a message: OP_REQ_DKG")
+				err := handleReqDKG()
+				if err != nil {
+					Logger.Error(err)
+				}
+			case MpcDKGMessage:
+				Logger.Debug("Get a message: MpcDKGMessage")
+				err := handleMpcDKGMessage(pMsg.Data)
+				if err != nil {
+					Logger.Error(err)
+				}
+			default:
+				Logger.Infof("Message is: %s", message)
+			}
+		case websocket.BinaryMessage:
+			Logger.Infof("Message type is BinaryMessage, %d", mt)
 		default:
-			Logger.Infof("Message is: %s", message)
+			Logger.Infof("Message type: %d", mt)
 		}
 	}
 }
 
 func HandlePingMessage(mt int, msg BaseMessage, conn *websocket.Conn) error {
-	if msg.Type == TYPE_PING {
+	if msg.Type == TypePing {
 		poneMsg := BaseMessage{
-			Type:     TYPE_PONG,
+			Type:     TypePong,
 			CreateAt: time.Now(),
 		}
 		b, err := json.Marshal(poneMsg)

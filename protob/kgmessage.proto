@@ -1,0 +1,47 @@
+syntax = "proto3";
+package mywebsocket;
+
+option go_package = "./mywebsocket";
+
+import "github.com/holynull/tss-wasm-lib/protob/message.proto";
+
+message Operation {
+	string op=1;
+	bytes data=2;
+} 
+message PublicKey{
+	bytes N=1;
+}
+message PrivateKey{
+	PublicKey PublicKey=1;
+	bytes LambdaN=2;
+	bytes PhiN=3;
+}
+message LocalPreParams  {
+	PrivateKey PaillierSK=1;// ski
+	bytes NTildei=2;
+	bytes H1i=3;
+	bytes H2i=4;
+	bytes Alpha=5;
+	bytes Beta=6;
+	bytes P=7;
+	bytes Q=8;
+	repeated bytes partyIds=9;
+	int32 Index=10;
+	string Gid=11;
+}
+message ProtoPartyID {
+	string id = 1;
+	string moniker = 2;
+	bytes key = 3;
+	int32 index=4;
+}
+
+message ProtoMpcMessage{
+	ProtoPartyID To=1;
+	ProtoPartyID From=2;
+	bytes Data=3;
+	string Gid=4;
+	string Type=5;
+	bool IsBroadcast=6;
+}
