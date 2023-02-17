@@ -1,15 +1,21 @@
 package mywebsocket
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/holynull/tss-wasm-lib/ecdsa/keygen"
+	"github.com/holynull/tss-wasm-lib/tss"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestStartWsServer(t *testing.T) {
@@ -88,5 +94,88 @@ func tickWriter(ctx context.Context, connect *websocket.Conn) {
 			//休息一秒
 			time.Sleep(time.Second)
 		}
+	}
+}
+
+func TestDataMashall(t *testing.T) {
+	gid := RandStr(16)
+	parties := tss.GenerateTestPartyIDs(3, 0)
+	var partiesb [][]byte
+	p := parties[0]
+	var pp = &ProtoPartyID{
+		Id:      p.Id,
+		Moniker: p.Moniker,
+		Key:     p.Key,
+		Index:   int32(p.Index),
+	}
+	b, err := proto.Marshal(pp)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	partiesb = append(partiesb[:], b)
+	prime, err := keygen.GeneratePreParams(2 * time.Minute)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	protoPrime := &LocalPreParams{
+		PaillierSK: &PrivateKey{
+			PublicKey: &PublicKey{
+				N: prime.PaillierSK.PublicKey.N.Bytes(),
+			},
+			LambdaN: prime.PaillierSK.LambdaN.Bytes(),
+			PhiN:    prime.PaillierSK.PhiN.Bytes(),
+		},
+		NTildei:  prime.NTildei.Bytes(),
+		H1I:      prime.H1i.Bytes(),
+		H2I:      prime.H2i.Bytes(),
+		Alpha:    prime.Alpha.Bytes(),
+		PartyIds: partiesb,
+		Index:    int32(0),
+		Gid:      gid,
+	}
+	b, err = proto.Marshal(protoPrime)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	opMsg := Operation{
+		Op:   "1111",
+		Data: b,
+	}
+	d, err := proto.Marshal(&opMsg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	encodedData := &bytes.Buffer{}
+	encodeer := base64.NewEncoder(base64.StdEncoding, encodedData)
+	_, err = encodeer.Write(d)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	dataB64Str := string(encodedData.Bytes())
+	decoder := base64.NewDecoder(base64.StdEncoding, strings.NewReader(dataB64Str))
+	n := base64.StdEncoding.DecodedLen(len(dataB64Str))
+	dbuf := make([]byte, n)
+	_, err = decoder.Read(dbuf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	var op Operation
+	err = proto.Unmarshal(dbuf, &op)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Logf("Op: %s", op.Op)
+	var data LocalPreParams
+	err = proto.Unmarshal(op.Data, &data)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/holynull/tss-wasm-lib/ecdsa/keygen"
 	"github.com/holynull/tss-wasm-lib/tss"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var GroupConnOfTasks sync.Map
@@ -84,7 +83,7 @@ func handleReqDKG() error {
 	}
 	GroupConnOfTasks.Store(gid, gConns)
 	for i := range parties {
-		err := writeMessageToConn(OpStartDKG, protoPrimes[i], gConns[i])
+		err := writeDKGStartToConn(OpStartDKG, protoPrimes[i], gConns[i])
 		if err != nil {
 			return err
 		}
@@ -92,7 +91,8 @@ func handleReqDKG() error {
 	return nil
 }
 
-func writeMessageToConn(op string, msg protoreflect.ProtoMessage, conn *websocket.Conn) error {
+func writeDKGStartToConn(op string, msg *LocalPreParams, conn *websocket.Conn) error {
+
 	b, err := proto.Marshal(msg)
 	if err != nil {
 		return err
@@ -126,6 +126,27 @@ func handleMpcDKGMessage(data []byte) error {
 		return fmt.Errorf("CAN_NOT_FIND_GROUP: %s", msg.Gid)
 	}
 	conns := val.([]*websocket.Conn)
-	writeMessageToConn(MpcDKGMessage, &msg, conns[toIndex])
+	writeMPCMessageToConn(MpcDKGMessage, &msg, conns[toIndex])
 	return nil
+}
+func writeMPCMessageToConn(op string, msg *ProtoMpcMessage, conn *websocket.Conn) error {
+	b, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	opMsg := Operation{
+		Op:   op,
+		Data: b,
+	}
+	d, err := proto.Marshal(&opMsg)
+	if err != nil {
+		return err
+	}
+	encodedData := &bytes.Buffer{}
+	encodeer := base64.NewEncoder(base64.StdEncoding, encodedData)
+	_, err = encodeer.Write(d)
+	if err != nil {
+		return err
+	}
+	return conn.WriteMessage(websocket.TextMessage, encodedData.Bytes())
 }

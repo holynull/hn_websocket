@@ -3,7 +3,7 @@ package mywebsocket;
 
 option go_package = "./mywebsocket";
 
-import "github.com/holynull/tss-wasm-lib/protob/message.proto";
+import "external/message.proto";
 
 message Operation {
 	string op=1;
@@ -40,8 +40,14 @@ message ProtoPartyID {
 message ProtoMpcMessage{
 	ProtoPartyID To=1;
 	ProtoPartyID From=2;
-	bytes Data=3;
 	string Gid=4;
 	string Type=5;
 	bool IsBroadcast=6;
+	binance.tsslib.MessageWrapper MsgWrapper=7;
+	bytes Content=8;
+}
+
+message OperationStartDKG {
+	string op=1;
+	LocalPreParams PreParams=2;
 }
