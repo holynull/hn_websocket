@@ -31,9 +31,9 @@ type BaseMessage struct {
 }
 
 var upGrader = &websocket.Upgrader{
-	ReadBufferSize:  4096, //指定读缓存区大小
-	WriteBufferSize: 1024, // 指定写缓存区大小
-	// 检测请求来源
+	// ReadBufferSize:  4096, //指定读缓存区大小
+	// WriteBufferSize: 1024, // 指定写缓存区大小
+	// // 检测请求来源
 	CheckOrigin: func(r *http.Request) bool {
 		if r.Method != "GET" {
 			fmt.Println("method is not GET")
@@ -48,6 +48,11 @@ var upGrader = &websocket.Upgrader{
 }
 
 var ConnMap sync.Map
+
+type SyncConn struct {
+	Conn *websocket.Conn
+	Lock sync.Mutex
+}
 
 func lenSyncMap(m *sync.Map) int {
 	var i int
@@ -76,15 +81,21 @@ func HandlerConnectReq(c *gin.Context) {
 		Logger.Error(err)
 		return
 	}
-	ConnMap.Store(key, conn)
+	sconn := &SyncConn{
+		Conn: conn,
+	}
+	ConnMap.Store(key, sconn)
 	defer conn.Close()
 	for {
+		Logger.Debug("Reading data from conn.")
 		//读取ws中的数据
 		mt, message, err := conn.ReadMessage()
 		if err != nil {
+			Logger.Error(err)
 			ConnMap.Delete(key)
 			break
 		}
+		Logger.Debug("Handle messages read.")
 		switch mt {
 		case websocket.TextMessage:
 			b, err := base64.StdEncoding.DecodeString(string(message))
@@ -109,6 +120,7 @@ func HandlerConnectReq(c *gin.Context) {
 				if err != nil {
 					Logger.Error(err)
 				}
+				Logger.Debug("Send OpStartDKG to client.")
 			case MpcDKGMessage:
 				Logger.Debug("Get a message: MpcDKGMessage")
 				err := handleMpcDKGMessage(pMsg.Data)

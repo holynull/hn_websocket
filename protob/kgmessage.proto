@@ -26,7 +26,7 @@ message LocalPreParams  {
 	bytes Beta=6;
 	bytes P=7;
 	bytes Q=8;
-	repeated bytes partyIds=9;
+	repeated ProtoPartyID partyIds=9;
 	int32 Index=10;
 	string Gid=11;
 }
@@ -38,7 +38,7 @@ message ProtoPartyID {
 }
 
 message ProtoMpcMessage{
-	ProtoPartyID To=1;
+	repeated ProtoPartyID To=1;
 	ProtoPartyID From=2;
 	string Gid=4;
 	string Type=5;
