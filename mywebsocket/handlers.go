@@ -111,7 +111,10 @@ func handleReqDKG() error {
 
 func writeMessageConn(op string, msg protoreflect.ProtoMessage, conn *SyncConn) error {
 	conn.Lock.Lock()
-	defer conn.Lock.Unlock()
+	defer func() {
+		conn.Lock.Unlock()
+		Logger.Debugf("Send %s message finished.", op)
+	}()
 	b, err := proto.Marshal(msg)
 	if err != nil {
 		return err
@@ -147,7 +150,6 @@ func handleMpcDKGMessage(data []byte) error {
 			if err != nil {
 				return err
 			}
-			time.Sleep(20 * time.Millisecond)
 		}
 	} else {
 		for _, p := range msg.To {
@@ -155,7 +157,6 @@ func handleMpcDKGMessage(data []byte) error {
 			if err != nil {
 				return err
 			}
-			time.Sleep(20 * time.Millisecond)
 		}
 	}
 	return nil
