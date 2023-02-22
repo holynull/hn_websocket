@@ -50,6 +50,7 @@ var upGrader = &websocket.Upgrader{
 var ConnMap sync.Map
 
 type SyncConn struct {
+	Id   string
 	Conn *websocket.Conn
 	Lock sync.Mutex
 }
@@ -82,6 +83,7 @@ func HandlerConnectReq(c *gin.Context) {
 		return
 	}
 	sconn := &SyncConn{
+		Id:   key,
 		Conn: conn,
 	}
 	ConnMap.Store(key, sconn)

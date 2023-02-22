@@ -113,7 +113,7 @@ func writeMessageConn(op string, msg protoreflect.ProtoMessage, conn *SyncConn) 
 	conn.Lock.Lock()
 	defer func() {
 		conn.Lock.Unlock()
-		Logger.Debugf("Send %s message finished.", op)
+		Logger.Debugf("Send %s message to %s finished.", op, conn.Id)
 	}()
 	b, err := proto.Marshal(msg)
 	if err != nil {
