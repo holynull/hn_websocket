@@ -534,6 +534,69 @@ func (x *OperationStartDKG) GetPreParams() *LocalPreParams {
 	return nil
 }
 
+type UnSignedMessage struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Msg   []byte `protobuf:"bytes,1,opt,name=Msg,proto3" json:"Msg,omitempty"`
+	Index int32  `protobuf:"varint,2,opt,name=Index,proto3" json:"Index,omitempty"`
+	Gid   string `protobuf:"bytes,3,opt,name=Gid,proto3" json:"Gid,omitempty"`
+}
+
+func (x *UnSignedMessage) Reset() {
+	*x = UnSignedMessage{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_kgmessage_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UnSignedMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnSignedMessage) ProtoMessage() {}
+
+func (x *UnSignedMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_kgmessage_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnSignedMessage.ProtoReflect.Descriptor instead.
+func (*UnSignedMessage) Descriptor() ([]byte, []int) {
+	return file_kgmessage_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UnSignedMessage) GetMsg() []byte {
+	if x != nil {
+		return x.Msg
+	}
+	return nil
+}
+
+func (x *UnSignedMessage) GetIndex() int32 {
+	if x != nil {
+		return x.Index
+	}
+	return 0
+}
+
+func (x *UnSignedMessage) GetGid() string {
+	if x != nil {
+		return x.Gid
+	}
+	return ""
+}
+
 var File_kgmessage_proto protoreflect.FileDescriptor
 
 var file_kgmessage_proto_rawDesc = []byte{
@@ -600,8 +663,13 @@ var file_kgmessage_proto_rawDesc = []byte{
 	0x65, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e,
 	0x6d, 0x79, 0x77, 0x65, 0x62, 0x73, 0x6f, 0x63, 0x6b, 0x65, 0x74, 0x2e, 0x4c, 0x6f, 0x63, 0x61,
 	0x6c, 0x50, 0x72, 0x65, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x52, 0x09, 0x50, 0x72, 0x65, 0x50,
-	0x61, 0x72, 0x61, 0x6d, 0x73, 0x42, 0x0f, 0x5a, 0x0d, 0x2e, 0x2f, 0x6d, 0x79, 0x77, 0x65, 0x62,
-	0x73, 0x6f, 0x63, 0x6b, 0x65, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x72, 0x61, 0x6d, 0x73, 0x22, 0x4b, 0x0a, 0x0f, 0x55, 0x6e, 0x53, 0x69, 0x67, 0x6e, 0x65,
+	0x64, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x4d, 0x73, 0x67, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x03, 0x4d, 0x73, 0x67, 0x12, 0x14, 0x0a, 0x05, 0x49, 0x6e,
+	0x64, 0x65, 0x78, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x49, 0x6e, 0x64, 0x65, 0x78,
+	0x12, 0x10, 0x0a, 0x03, 0x47, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x47,
+	0x69, 0x64, 0x42, 0x0f, 0x5a, 0x0d, 0x2e, 0x2f, 0x6d, 0x79, 0x77, 0x65, 0x62, 0x73, 0x6f, 0x63,
+	0x6b, 0x65, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -616,7 +684,7 @@ func file_kgmessage_proto_rawDescGZIP() []byte {
 	return file_kgmessage_proto_rawDescData
 }
 
-var file_kgmessage_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_kgmessage_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_kgmessage_proto_goTypes = []interface{}{
 	(*Operation)(nil),          // 0: mywebsocket.Operation
 	(*PublicKey)(nil),          // 1: mywebsocket.PublicKey
@@ -625,7 +693,8 @@ var file_kgmessage_proto_goTypes = []interface{}{
 	(*ProtoPartyID)(nil),       // 4: mywebsocket.ProtoPartyID
 	(*ProtoMpcMessage)(nil),    // 5: mywebsocket.ProtoMpcMessage
 	(*OperationStartDKG)(nil),  // 6: mywebsocket.OperationStartDKG
-	(*tss.MessageWrapper)(nil), // 7: binance.tsslib.MessageWrapper
+	(*UnSignedMessage)(nil),    // 7: mywebsocket.UnSignedMessage
+	(*tss.MessageWrapper)(nil), // 8: binance.tsslib.MessageWrapper
 }
 var file_kgmessage_proto_depIdxs = []int32{
 	1, // 0: mywebsocket.PrivateKey.PublicKey:type_name -> mywebsocket.PublicKey
@@ -633,7 +702,7 @@ var file_kgmessage_proto_depIdxs = []int32{
 	4, // 2: mywebsocket.LocalPreParams.partyIds:type_name -> mywebsocket.ProtoPartyID
 	4, // 3: mywebsocket.ProtoMpcMessage.To:type_name -> mywebsocket.ProtoPartyID
 	4, // 4: mywebsocket.ProtoMpcMessage.From:type_name -> mywebsocket.ProtoPartyID
-	7, // 5: mywebsocket.ProtoMpcMessage.MsgWrapper:type_name -> binance.tsslib.MessageWrapper
+	8, // 5: mywebsocket.ProtoMpcMessage.MsgWrapper:type_name -> binance.tsslib.MessageWrapper
 	3, // 6: mywebsocket.OperationStartDKG.PreParams:type_name -> mywebsocket.LocalPreParams
 	7, // [7:7] is the sub-list for method output_type
 	7, // [7:7] is the sub-list for method input_type
@@ -732,6 +801,18 @@ func file_kgmessage_proto_init() {
 				return nil
 			}
 		}
+		file_kgmessage_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UnSignedMessage); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -739,7 +820,7 @@ func file_kgmessage_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_kgmessage_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -133,6 +133,26 @@ func writeMessageConn(op string, msg protoreflect.ProtoMessage, conn *SyncConn) 
 	return conn.Conn.WriteMessage(websocket.TextMessage, []byte(dB64))
 }
 
+func writeBytesConn(op string, msg []byte, conn *SyncConn) error {
+	conn.Lock.Lock()
+	defer func() {
+		conn.Lock.Unlock()
+		Logger.Debugf("Send %s message to %s finished.", op, conn.Id)
+	}()
+	// Logger.Debugf("DataB64: %s", dataBase64Str)
+	opMsg := Operation{
+		Op:   op,
+		Data: msg,
+	}
+	d, err := proto.Marshal(&opMsg)
+	if err != nil {
+		return err
+	}
+	dB64 := base64.StdEncoding.EncodeToString(d)
+	time.Sleep(20 * time.Millisecond)
+	return conn.Conn.WriteMessage(websocket.TextMessage, []byte(dB64))
+}
+
 func handleMpcDKGMessage(data []byte) error {
 	var msg ProtoMpcMessage
 	err := proto.Unmarshal(data, &msg)
@@ -146,18 +166,45 @@ func handleMpcDKGMessage(data []byte) error {
 	conns := val.([]*SyncConn)
 	if msg.To == nil || len(msg.To) == 0 {
 		for _, conn := range conns {
-			err := writeMessageConn(MpcDKGMessage, &msg, conn)
+			err := writeMessageConn(MpcMessage, &msg, conn)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
 		for _, p := range msg.To {
-			err := writeMessageConn(MpcDKGMessage, &msg, conns[p.Index])
+			err := writeMessageConn(MpcMessage, &msg, conns[p.Index])
 			if err != nil {
 				return err
 			}
 		}
 	}
+	return nil
+}
+
+func handleReqSING(msg []byte) error {
+	gid := RandStr(16)
+	var gConns []*SyncConn
+	for i := 0; i < 2; i++ {
+		userId := fmt.Sprintf("user%d", i)
+		dId := fmt.Sprintf("did%d", i)
+		key := fmt.Sprintf("%s_%s", userId, dId)
+		if conn, ok := ConnMap.Load(key); !ok {
+			return fmt.Errorf("NO_CONN:%s_%s", userId, dId)
+		} else {
+			sconn := &SyncConn{
+				Id:   key,
+				Conn: conn.(*websocket.Conn),
+			}
+			gConns = append(gConns[:], sconn)
+			unSignMsg := &UnSignedMessage{
+				Msg:   msg,
+				Index: int32(i),
+				Gid:   gid,
+			}
+			writeMessageConn(OpStartSIGN, unSignMsg, sconn)
+		}
+	}
+	GroupConnOfTasks.Store(gid, gConns)
 	return nil
 }
