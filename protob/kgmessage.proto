@@ -57,3 +57,10 @@ message UnSignedMessage {
 	int32 Index=2;
 	string Gid=3;
 }
+message ResharingMessage {
+	int32 Index=1;
+	int32 OIndex=2;
+	bool runOldParty=3;
+	string Gid=4;
+	LocalPreParams PreParams=5;
+}

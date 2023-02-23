@@ -172,39 +172,126 @@ func handleMpcDKGMessage(data []byte) error {
 			}
 		}
 	} else {
-		for _, p := range msg.To {
-			err := writeMessageConn(MpcMessage, &msg, conns[p.Index])
-			if err != nil {
-				return err
+		for i := range msg.To {
+			if int(msg.To[i].Index) < len(conns) {
+				err := writeMessageConn(MpcMessage, &msg, conns[msg.To[i].Index])
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 	return nil
 }
 
-func handleReqSING(msg []byte) error {
+const (
+	THRESHOLD   = 1
+	PARTY_COUNT = 3
+)
+
+var OLD_PARTY_INDEX = []int{0, 1}
+
+func handleReqSIGN(msg []byte) error {
 	gid := RandStr(16)
 	var gConns []*SyncConn
-	for i := 0; i < 2; i++ {
+	for i := 0; i < THRESHOLD+1; i++ {
 		userId := fmt.Sprintf("user%d", i)
 		dId := fmt.Sprintf("did%d", i)
 		key := fmt.Sprintf("%s_%s", userId, dId)
 		if conn, ok := ConnMap.Load(key); !ok {
 			return fmt.Errorf("NO_CONN:%s_%s", userId, dId)
 		} else {
-			sconn := &SyncConn{
-				Id:   key,
-				Conn: conn.(*websocket.Conn),
-			}
+			sconn := conn.(*SyncConn)
 			gConns = append(gConns[:], sconn)
-			unSignMsg := &UnSignedMessage{
-				Msg:   msg,
-				Index: int32(i),
-				Gid:   gid,
-			}
-			writeMessageConn(OpStartSIGN, unSignMsg, sconn)
 		}
 	}
 	GroupConnOfTasks.Store(gid, gConns)
+	for i := range gConns {
+		unSignMsg := &UnSignedMessage{
+			Msg:   msg,
+			Index: int32(i),
+			Gid:   gid,
+		}
+		writeMessageConn(OpStartSIGN, unSignMsg, gConns[i])
+	}
+	return nil
+}
+
+func handlerReqResharing() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	preTicker := time.NewTicker(time.Second)
+	go func() {
+		counter := 0
+		for {
+			select {
+			case <-preTicker.C:
+				counter++
+				Logger.Debugf("Waiting in %d s", counter)
+			case <-ctx.Done():
+				preTicker.Stop()
+				break
+			}
+		}
+	}()
+	gid := RandStr(16)
+	var protoPrimes []*LocalPreParams
+	for i := 0; i < PARTY_COUNT; i++ {
+		prime, err := keygen.GeneratePreParams(2 * time.Minute)
+		if err != nil {
+			cancel()
+			return err
+		}
+		protoPrime := &LocalPreParams{
+			PaillierSK: &PrivateKey{
+				PublicKey: &PublicKey{
+					N: prime.PaillierSK.PublicKey.N.Bytes(),
+				},
+				LambdaN: prime.PaillierSK.LambdaN.Bytes(),
+				PhiN:    prime.PaillierSK.PhiN.Bytes(),
+			},
+			NTildei: prime.NTildei.Bytes(),
+			H1I:     prime.H1i.Bytes(),
+			H2I:     prime.H2i.Bytes(),
+			Alpha:   prime.Alpha.Bytes(),
+			Beta:    prime.Beta.Bytes(),
+			P:       prime.P.Bytes(),
+			Q:       prime.Q.Bytes(),
+			Index:   int32(i),
+			Gid:     gid,
+		}
+		protoPrimes = append(protoPrimes[:], protoPrime)
+	}
+	var gConns []*SyncConn
+	for i := 0; i < PARTY_COUNT; i++ {
+		userId := fmt.Sprintf("user%d", i)
+		dId := fmt.Sprintf("did%d", i)
+		key := fmt.Sprintf("%s_%s", userId, dId)
+		if conn, ok := ConnMap.Load(key); !ok {
+			return fmt.Errorf("NO_CONN:%s_%s", userId, dId)
+		} else {
+			sconn := conn.(*SyncConn)
+			gConns = append(gConns[:], sconn)
+		}
+	}
+	GroupConnOfTasks.Store(gid, gConns)
+	for i := range gConns {
+		runOldPary := false
+		var _oIndex int
+		for oi, oIndex := range OLD_PARTY_INDEX {
+			if i == oIndex {
+				runOldPary = true
+				_oIndex = oi
+			}
+		}
+		msg := &ResharingMessage{
+			Index:       int32(i),
+			OIndex:      int32(_oIndex),
+			RunOldParty: runOldPary,
+			Gid:         gid,
+			PreParams:   protoPrimes[i],
+		}
+		writeMessageConn(OpStartRESHARING, msg, gConns[i])
+	}
+	cancel()
 	return nil
 }

@@ -18,13 +18,15 @@ import (
 var Logger = log.Logger("mywebsocket")
 
 const (
-	TypePing    = "ping"
-	TypePong    = "pong"
-	OpReqDKG    = "reqdkg"
-	OpReqSIGN   = "reqSign"
-	OpStartDKG  = "start_dkg"
-	OpStartSIGN = "start_sign"
-	MpcMessage  = "mpc_message"
+	TypePing         = "ping"
+	TypePong         = "pong"
+	OpReqDKG         = "reqdkg"
+	OpReqSIGN        = "reqSign"
+	OpReqRESHARING   = "reqResharing"
+	OpStartDKG       = "start_dkg"
+	OpStartSIGN      = "start_sign"
+	OpStartRESHARING = "start_resharing"
+	MpcMessage       = "mpc_message"
 )
 
 type BaseMessage struct {
@@ -126,7 +128,13 @@ func HandlerConnectReq(c *gin.Context) {
 				}
 			case OpReqSIGN:
 				Logger.Debugf("Get a message: %s", OpReqSIGN)
-				err := handleReqSING(pMsg.Data)
+				err := handleReqSIGN(pMsg.Data)
+				if err != nil {
+					Logger.Error(err)
+				}
+			case OpReqRESHARING:
+				Logger.Debugf("Get a message: %s", OpReqRESHARING)
+				err := handlerReqResharing()
 				if err != nil {
 					Logger.Error(err)
 				}
