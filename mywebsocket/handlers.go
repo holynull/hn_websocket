@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/holynull/tss-wasm-lib/crypto/dlnproof"
 	"github.com/holynull/tss-wasm-lib/ecdsa/keygen"
 	"github.com/holynull/tss-wasm-lib/tss"
 	"google.golang.org/protobuf/proto"
@@ -68,6 +69,20 @@ func handleReqDKG() error {
 			cancel()
 			return err
 		}
+		dlnProof1 := dlnproof.NewDLNProof(prime.H1i, prime.H2i, prime.Alpha, prime.P, prime.Q, prime.NTildei)
+		dlnProof2 := dlnproof.NewDLNProof(prime.H2i, prime.H1i, prime.Beta, prime.P, prime.Q, prime.NTildei)
+		alpha1 := make([][]byte, 0)
+		T1 := make([][]byte, 0)
+		for i := range dlnProof1.Alpha {
+			alpha1 = append(alpha1[:], dlnProof1.Alpha[i].Bytes())
+			T1 = append(T1[:], dlnProof1.T[i].Bytes())
+		}
+		alpha2 := make([][]byte, 0)
+		T2 := make([][]byte, 0)
+		for i := range dlnProof2.Alpha {
+			alpha2 = append(alpha2[:], dlnProof2.Alpha[i].Bytes())
+			T2 = append(T2[:], dlnProof2.T[i].Bytes())
+		}
 		protoPrime := &LocalPreParams{
 			PaillierSK: &PrivateKey{
 				PublicKey: &PublicKey{
@@ -85,6 +100,14 @@ func handleReqDKG() error {
 			Q:       prime.Q.Bytes(),
 			Index:   int32(i),
 			Gid:     gid,
+			Dlnproof1: &DLNProof{
+				Alpha: alpha1,
+				T:     T1,
+			},
+			Dlnproof2: &DLNProof{
+				Alpha: alpha2,
+				T:     T2,
+			},
 		}
 		protoPrimes = append(protoPrimes, protoPrime)
 
@@ -97,7 +120,6 @@ func handleReqDKG() error {
 			gConns = append(gConns[:], conn.(*SyncConn))
 		}
 	}
-	cancel()
 	GroupConnOfTasks.Store(gid, gConns)
 	for i := range parties {
 		protoPrimes[i].PartyIds = pparties
@@ -106,6 +128,7 @@ func handleReqDKG() error {
 			return err
 		}
 	}
+	cancel()
 	return nil
 }
 
@@ -241,6 +264,20 @@ func handlerReqResharing() error {
 			cancel()
 			return err
 		}
+		dlnProof1 := dlnproof.NewDLNProof(prime.H1i, prime.H2i, prime.Alpha, prime.P, prime.Q, prime.NTildei)
+		dlnProof2 := dlnproof.NewDLNProof(prime.H2i, prime.H1i, prime.Beta, prime.P, prime.Q, prime.NTildei)
+		alpha1 := make([][]byte, 0)
+		T1 := make([][]byte, 0)
+		for i := range dlnProof1.Alpha {
+			alpha1 = append(alpha1[:], dlnProof1.Alpha[i].Bytes())
+			T1 = append(T1[:], dlnProof1.T[i].Bytes())
+		}
+		alpha2 := make([][]byte, 0)
+		T2 := make([][]byte, 0)
+		for i := range dlnProof2.Alpha {
+			alpha2 = append(alpha2[:], dlnProof2.Alpha[i].Bytes())
+			T2 = append(T2[:], dlnProof2.T[i].Bytes())
+		}
 		protoPrime := &LocalPreParams{
 			PaillierSK: &PrivateKey{
 				PublicKey: &PublicKey{
@@ -258,6 +295,14 @@ func handlerReqResharing() error {
 			Q:       prime.Q.Bytes(),
 			Index:   int32(i),
 			Gid:     gid,
+			Dlnproof1: &DLNProof{
+				Alpha: alpha1,
+				T:     T1,
+			},
+			Dlnproof2: &DLNProof{
+				Alpha: alpha2,
+				T:     T2,
+			},
 		}
 		protoPrimes = append(protoPrimes[:], protoPrime)
 	}

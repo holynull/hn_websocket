@@ -29,6 +29,8 @@ message LocalPreParams  {
 	repeated ProtoPartyID partyIds=9;
 	int32 Index=10;
 	string Gid=11;
+	DLNProof Dlnproof1=12;
+	DLNProof Dlnproof2=13;
 }
 message ProtoPartyID {
 	string id = 1;
@@ -63,4 +65,8 @@ message ResharingMessage {
 	bool runOldParty=3;
 	string Gid=4;
 	LocalPreParams PreParams=5;
+}
+message DLNProof {
+	repeated bytes Alpha=1;
+	repeated bytes T=2;
 }
