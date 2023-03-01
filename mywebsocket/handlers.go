@@ -29,8 +29,15 @@ func RandStr(length int) string {
 	}
 	return string(result)
 }
-func handleReqDKG() error {
+func handleReqDKG(data []byte) error {
+	var config DKGConfig
+	err := proto.Unmarshal(data, &config)
+	if err != nil {
+		return err
+	}
+	Logger.Debugf("DKG: %d-%d ", config.PartyCount, config.Threshold+1)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	preTicker := time.NewTicker(time.Second)
 	go func() {
 		counter := 0
@@ -47,11 +54,11 @@ func handleReqDKG() error {
 	}()
 	gid := RandStr(16)
 	connLen := lenSyncMap(&ConnMap)
-	if connLen != 3 {
+	if connLen < int(config.PartyCount) {
 		cancel()
 		return errors.New("LEN_OF_DEVICES_CONN_LESS_THAN_3")
 	}
-	parties := tss.GenerateTestPartyIDs(3, 0)
+	parties := tss.GenerateTestPartyIDs(int(config.PartyCount), 0)
 	var pparties []*ProtoPartyID
 	var protoPrimes []*LocalPreParams
 	var gConns []*SyncConn
@@ -108,6 +115,8 @@ func handleReqDKG() error {
 				Alpha: alpha2,
 				T:     T2,
 			},
+			PartyCount: config.PartyCount,
+			Threshold:  config.Threshold,
 		}
 		protoPrimes = append(protoPrimes, protoPrime)
 
@@ -128,7 +137,6 @@ func handleReqDKG() error {
 			return err
 		}
 	}
-	cancel()
 	return nil
 }
 
@@ -176,7 +184,7 @@ func writeBytesConn(op string, msg []byte, conn *SyncConn) error {
 	return conn.Conn.WriteMessage(websocket.TextMessage, []byte(dB64))
 }
 
-func handleMpcDKGMessage(data []byte) error {
+func handleMpcMessage(data []byte) error {
 	var msg ProtoMpcMessage
 	err := proto.Unmarshal(data, &msg)
 	if err != nil {
@@ -196,28 +204,24 @@ func handleMpcDKGMessage(data []byte) error {
 		}
 	} else {
 		for i := range msg.To {
-			if int(msg.To[i].Index) < len(conns) {
-				err := writeMessageConn(MpcMessage, &msg, conns[msg.To[i].Index])
-				if err != nil {
-					return err
-				}
+			err := writeMessageConn(MpcMessage, &msg, conns[msg.To[i].Index])
+			if err != nil {
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-const (
-	THRESHOLD   = 1
-	PARTY_COUNT = 3
-)
-
-var OLD_PARTY_INDEX = []int{0, 1}
-
 func handleReqSIGN(msg []byte) error {
+	var config SignConfig
+	err := proto.Unmarshal(msg, &config)
+	if err != nil {
+		return err
+	}
 	gid := RandStr(16)
 	var gConns []*SyncConn
-	for i := 0; i < THRESHOLD+1; i++ {
+	for i := range config.SignPartyIndex {
 		userId := fmt.Sprintf("user%d", i)
 		dId := fmt.Sprintf("did%d", i)
 		key := fmt.Sprintf("%s_%s", userId, dId)
@@ -227,21 +231,30 @@ func handleReqSIGN(msg []byte) error {
 			sconn := conn.(*SyncConn)
 			gConns = append(gConns[:], sconn)
 		}
+		unSignMsg := &UnSignedMessage{
+			Msg:    msg,
+			Index:  config.SignPartyIndex[i],
+			Gid:    gid,
+			Config: &config,
+		}
+		err := writeMessageConn(OpStartSIGN, unSignMsg, gConns[i])
+		if err != nil {
+			return nil
+		}
 	}
 	GroupConnOfTasks.Store(gid, gConns)
-	for i := range gConns {
-		unSignMsg := &UnSignedMessage{
-			Msg:   msg,
-			Index: int32(i),
-			Gid:   gid,
-		}
-		writeMessageConn(OpStartSIGN, unSignMsg, gConns[i])
-	}
 	return nil
 }
 
-func handlerReqResharing() error {
+func handlerReqResharing(msg []byte) error {
+	var config ResharingConfig
+	err := proto.Unmarshal(msg, &config)
+	if err != nil {
+		return err
+	}
+	Logger.Debugf("RESHARING: %d-%d to %d-%d , %v", config.PartyCount, config.Threshold+1, config.NPartyCount, config.NThreshold+1, config.OldPartyIndex)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	preTicker := time.NewTicker(time.Second)
 	go func() {
 		counter := 0
@@ -258,7 +271,13 @@ func handlerReqResharing() error {
 	}()
 	gid := RandStr(16)
 	var protoPrimes []*LocalPreParams
-	for i := 0; i < PARTY_COUNT; i++ {
+	var maxPartyLen int
+	if int(config.NPartyCount) > len(config.OldPartyIndex) {
+		maxPartyLen = int(config.NPartyCount)
+	} else {
+		maxPartyLen = len(config.OldPartyIndex)
+	}
+	for i := 0; i < int(config.NPartyCount); i++ {
 		prime, err := keygen.GeneratePreParams(2 * time.Minute)
 		if err != nil {
 			cancel()
@@ -307,7 +326,8 @@ func handlerReqResharing() error {
 		protoPrimes = append(protoPrimes[:], protoPrime)
 	}
 	var gConns []*SyncConn
-	for i := 0; i < PARTY_COUNT; i++ {
+
+	for i := 0; i < maxPartyLen; i++ {
 		userId := fmt.Sprintf("user%d", i)
 		dId := fmt.Sprintf("did%d", i)
 		key := fmt.Sprintf("%s_%s", userId, dId)
@@ -320,23 +340,29 @@ func handlerReqResharing() error {
 	}
 	GroupConnOfTasks.Store(gid, gConns)
 	for i := range gConns {
-		runOldPary := false
-		var _oIndex int
-		for oi, oIndex := range OLD_PARTY_INDEX {
-			if i == oIndex {
-				runOldPary = true
-				_oIndex = oi
+		msg := &ResharingMessage{
+			Gid:    gid,
+			Config: &config,
+		}
+		var n *ResharingData
+		if i < int(config.NPartyCount) {
+			n = &ResharingData{
+				Index:     int32(i),
+				PreParams: protoPrimes[i],
 			}
 		}
-		msg := &ResharingMessage{
-			Index:       int32(i),
-			OIndex:      int32(_oIndex),
-			RunOldParty: runOldPary,
-			Gid:         gid,
-			PreParams:   protoPrimes[i],
+		var o *ResharingData
+		for _, oi := range config.OldPartyIndex {
+			if int(oi) == i {
+				o = &ResharingData{
+					Index: oi,
+				}
+				break
+			}
 		}
+		msg.OldParty = o
+		msg.NewParty = n
 		writeMessageConn(OpStartRESHARING, msg, gConns[i])
 	}
-	cancel()
 	return nil
 }

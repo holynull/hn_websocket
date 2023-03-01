@@ -31,6 +31,8 @@ message LocalPreParams  {
 	string Gid=11;
 	DLNProof Dlnproof1=12;
 	DLNProof Dlnproof2=13;
+	int32 PartyCount=14;
+	int32 Threshold=15;
 }
 message ProtoPartyID {
 	string id = 1;
@@ -58,15 +60,35 @@ message UnSignedMessage {
 	bytes Msg=1;
 	int32 Index=2;
 	string Gid=3;
+	SignConfig Config=4;
 }
-message ResharingMessage {
+message ResharingMessage{
+	string Gid=1;
+	ResharingData OldParty=2;
+	ResharingData NewParty=3;
+	ResharingConfig Config=4;
+}
+message ResharingData {
 	int32 Index=1;
-	int32 OIndex=2;
-	bool runOldParty=3;
-	string Gid=4;
-	LocalPreParams PreParams=5;
+	LocalPreParams PreParams=2;
 }
 message DLNProof {
 	repeated bytes Alpha=1;
 	repeated bytes T=2;
 }
+message DKGConfig{
+	int32 PartyCount=1;
+	int32 Threshold=2;
+}
+message SignConfig{
+	int32 PartyCount=1;
+	int32 Threshold=2;
+	repeated int32 SignPartyIndex=3;
+}
+message ResharingConfig{
+	int32 PartyCount=1;
+	int32 Threshold=2;
+	int32 NPartyCount=3;
+	int32 NThreshold=4;
+	repeated int32 OldPartyIndex=5; 
+ }

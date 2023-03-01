@@ -59,6 +59,11 @@ type SyncConn struct {
 	Lock sync.Mutex
 }
 
+type GroupConn struct {
+	PartyIds []string
+	*SyncConn
+}
+
 func lenSyncMap(m *sync.Map) int {
 	var i int
 	m.Range(func(k, v interface{}) bool {
@@ -122,7 +127,7 @@ func HandlerConnectReq(c *gin.Context) {
 			// }
 			case OpReqDKG:
 				Logger.Debugf("Get a message: %s", OpReqDKG)
-				err := handleReqDKG()
+				err := handleReqDKG(pMsg.Data)
 				if err != nil {
 					Logger.Error(err)
 				}
@@ -134,13 +139,13 @@ func HandlerConnectReq(c *gin.Context) {
 				}
 			case OpReqRESHARING:
 				Logger.Debugf("Get a message: %s", OpReqRESHARING)
-				err := handlerReqResharing()
+				err := handlerReqResharing(pMsg.Data)
 				if err != nil {
 					Logger.Error(err)
 				}
 			case MpcMessage:
 				Logger.Debug("Get a message: MpcDKGMessage")
-				err := handleMpcDKGMessage(pMsg.Data)
+				err := handleMpcMessage(pMsg.Data)
 				if err != nil {
 					Logger.Error(err)
 				}
