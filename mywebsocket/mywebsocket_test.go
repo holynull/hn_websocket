@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bnb-chain/tss-lib/ecdsa/keygen"
+	"github.com/bnb-chain/tss-lib/tss"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/holynull/tss-wasm-lib/ecdsa/keygen"
-	"github.com/holynull/tss-wasm-lib/tss"
 	"google.golang.org/protobuf/proto"
 )
 

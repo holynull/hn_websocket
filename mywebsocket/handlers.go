@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bnb-chain/tss-lib/crypto/dlnproof"
+	"github.com/bnb-chain/tss-lib/ecdsa/keygen"
+	"github.com/bnb-chain/tss-lib/tss"
 	"github.com/gorilla/websocket"
-	"github.com/holynull/tss-wasm-lib/crypto/dlnproof"
-	"github.com/holynull/tss-wasm-lib/ecdsa/keygen"
-	"github.com/holynull/tss-wasm-lib/tss"
 	"google.golang.org/protobuf/proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 )

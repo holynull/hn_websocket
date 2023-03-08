@@ -7,7 +7,7 @@
 package mywebsocket
 
 import (
-	tss "github.com/holynull/tss-wasm-lib/tss"
+	tss "github.com/bnb-chain/tss-lib/tss"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

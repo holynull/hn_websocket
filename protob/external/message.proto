@@ -6,7 +6,7 @@
 
 syntax = "proto3";
 package binance.tsslib;
-option go_package = "github.com/holynull/tss-wasm-lib/tss";
+option go_package = "github.com/bnb-chain/tss-lib/tss";
 
 import "google/protobuf/any.proto";
 

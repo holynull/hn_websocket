@@ -44,8 +44,8 @@ require (
 )
 
 require (
-	github.com/holynull/tss-wasm-lib v0.0.0
+	github.com/bnb-chain/tss-lib v0.0.0
 	google.golang.org/protobuf v1.28.1
 )
 
-replace github.com/holynull/tss-wasm-lib => ../../../github.com/holynull/tss-wasm-lib
+replace github.com/bnb-chain/tss-lib => github.com/rayhopf/tss-lib v1.3.8
